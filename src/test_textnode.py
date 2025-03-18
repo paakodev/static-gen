@@ -49,7 +49,7 @@ class TestTextNode(unittest.TestCase):
 
     def test_repr_output(self):
         node = TextNode("Test", TextType.BOLD, "https://example.com")
-        expected_repr = "TextNode(Test, bold, https://example.com)"
+        expected_repr = "TextNode(`Test`, bold, https://example.com)"
         self.assertEqual(repr(node), expected_repr)
         
     """
