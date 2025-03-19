@@ -1,7 +1,8 @@
+from typing import List
 from textnode import TextNode, TextType
 import re
 
-def split_nodes_delimiter(old_nodes: list, delimiter: str, text_type: TextType):
+def split_nodes_delimiter(old_nodes: List[TextNode], delimiter: str, text_type: TextType) -> List[TextNode]:
     new_nodes = []
     for node in old_nodes:
         if node.text_type is not TextType.TEXT:
@@ -24,7 +25,7 @@ def split_nodes_delimiter(old_nodes: list, delimiter: str, text_type: TextType):
         
     return new_nodes
 
-def extract_markdown_images(text: str):
+def extract_markdown_images(text: str) -> List[tuple[str, str]]:
     # Verbose regex for images with comments
     pattern = re.compile(
         r"""
@@ -44,7 +45,7 @@ def extract_markdown_images(text: str):
     images = re.findall(pattern, text)
     return images
 
-def extract_markdown_links(text:str ):
+def extract_markdown_links(text:str) -> List[tuple[str, str]]:
     # Verbose regex for markdown links with comments
     pattern = re.compile(
         r"""
