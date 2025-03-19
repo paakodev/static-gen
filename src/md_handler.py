@@ -21,7 +21,10 @@ def split_nodes_delimiter(old_nodes: List[TextNode], delimiter: str, text_type: 
         
         new_nodes.append(TextNode(chunks[0], TextType.TEXT))
         new_nodes.append(TextNode(chunks[1], text_type))
-        new_nodes.append(TextNode(chunks[2], TextType.TEXT))
+        
+        # Process the remainder recursively
+        remainder_node = TextNode(chunks[2], TextType.TEXT)
+        new_nodes.extend(split_nodes_delimiter([remainder_node], delimiter, text_type)) 
         
     return new_nodes
 
@@ -128,3 +131,13 @@ def split_nodes_link(old_nodes: List[TextNode]) -> List[TextNode]:
         
     return new_nodes
 
+def text_to_textnodes(text: str) -> List[TextNode]:
+    new_nodes = [TextNode(text, TextType.TEXT)]
+    new_nodes = split_nodes_image(new_nodes)
+    new_nodes = split_nodes_link(new_nodes)
+    new_nodes = split_nodes_delimiter(new_nodes, "`", TextType.CODE)
+    new_nodes = split_nodes_delimiter(new_nodes, "**", TextType.BOLD)
+    new_nodes = split_nodes_delimiter(new_nodes, "_", TextType.ITALIC)
+    # Adjusted empty-node cleaner, leaves single spaces alone
+    new_nodes = [node for node in new_nodes if not (node.text_type == TextType.TEXT and (node.text.strip() == "" and node.text != " "))]
+    return new_nodes

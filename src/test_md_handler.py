@@ -1,6 +1,6 @@
 import unittest
 from textnode import TextNode, TextType
-from md_handler import split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link
+from md_handler import split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes
 
 class TestMdHandler(unittest.TestCase):
     #region split_nodes_delimiter
@@ -16,13 +16,15 @@ class TestMdHandler(unittest.TestCase):
         self.assertEqual(result, expected)
 
     def test_multiple_occurrences(self):
-        """Tests that only the first Markdown occurrence is processed."""
+        """Tests that all coorences of Markdown is processed."""
         nodes = [TextNode("This is **bold** and this is **also bold**.", TextType.TEXT)]
         result = split_nodes_delimiter(nodes, "**", TextType.BOLD)
         expected = [
             TextNode("This is ", TextType.TEXT),
             TextNode("bold", TextType.BOLD),
-            TextNode(" and this is **also bold**.", TextType.TEXT)  # Left untouched
+            TextNode(" and this is ", TextType.TEXT),
+            TextNode("also bold", TextType.BOLD),
+            TextNode(".", TextType.TEXT)
         ]
         self.assertEqual(result, expected)
 
@@ -41,19 +43,19 @@ class TestMdHandler(unittest.TestCase):
 
     def test_nested_calls(self):
         """Tests processing text that requires multiple split calls."""
-        nodes = [TextNode("This is **bold** and *italic*.", TextType.TEXT)]
+        nodes = [TextNode("This is **bold** and _italic_.", TextType.TEXT)]
         
         # First, extract bold
         nodes = split_nodes_delimiter(nodes, "**", TextType.BOLD)
         expected = [
             TextNode("This is ", TextType.TEXT),
             TextNode("bold", TextType.BOLD),
-            TextNode(" and *italic*.", TextType.TEXT)
+            TextNode(" and _italic_.", TextType.TEXT)
         ]
         self.assertEqual(nodes, expected)
 
         # Then, extract italic from remaining text
-        nodes = split_nodes_delimiter(nodes, "*", TextType.ITALIC)
+        nodes = split_nodes_delimiter(nodes, "_", TextType.ITALIC)
         expected = [
             TextNode("This is ", TextType.TEXT),
             TextNode("bold", TextType.BOLD),
@@ -76,10 +78,10 @@ class TestMdHandler(unittest.TestCase):
 
     def test_edge_case_trailing_delimiter(self):
         """Tests when the delimiter appears at the end of the string."""
-        nodes = [TextNode("Starts **bold**", TextType.TEXT)]
+        nodes = [TextNode("Ends **bold**", TextType.TEXT)]
         result = split_nodes_delimiter(nodes, "**", TextType.BOLD)
         expected = [
-            TextNode("Starts ", TextType.TEXT),
+            TextNode("Ends ", TextType.TEXT),
             TextNode("bold", TextType.BOLD),
             TextNode("", TextType.TEXT)  # Ensures trailing part is preserved
         ]
@@ -87,8 +89,8 @@ class TestMdHandler(unittest.TestCase):
     
     def test_edge_case_leading_delimiter(self):
         """Tests handling of a leading delimiter in the text."""
-        nodes = [TextNode("*italic* text", TextType.TEXT)]  # Leading *
-        result = split_nodes_delimiter(nodes, "*", TextType.ITALIC)
+        nodes = [TextNode("_italic_ text", TextType.TEXT)]  # Leading *
+        result = split_nodes_delimiter(nodes, "_", TextType.ITALIC)
 
         expected = [
             TextNode("", TextType.TEXT),  # Before the delimiter (empty)
@@ -100,9 +102,9 @@ class TestMdHandler(unittest.TestCase):
 
     def test_multiple_different_delimiters(self):
         """Tests handling multiple different delimiters in sequence."""
-        nodes = [TextNode("This is **bold** and *italic*.", TextType.TEXT)]
+        nodes = [TextNode("This is **bold** and _italic_.", TextType.TEXT)]
         nodes = split_nodes_delimiter(nodes, "**", TextType.BOLD)  # Extract bold
-        nodes = split_nodes_delimiter(nodes, "*", TextType.ITALIC)  # Extract italic
+        nodes = split_nodes_delimiter(nodes, "_", TextType.ITALIC)  # Extract italic
         
         expected = [
             TextNode("This is ", TextType.TEXT),
@@ -121,8 +123,8 @@ class TestMdHandler(unittest.TestCase):
         
     def test_empty_content_between_delimiters(self):
         """Tests handling of empty content between delimiters."""
-        nodes = [TextNode("**", TextType.TEXT)]  # Text is just the delimiter itself
-        result = split_nodes_delimiter(nodes, "*", TextType.ITALIC)
+        nodes = [TextNode("__", TextType.TEXT)]  # Text is just the delimiter itself
+        result = split_nodes_delimiter(nodes, "_", TextType.ITALIC)
 
         expected = [
             TextNode("", TextType.TEXT),  # Before the delimiter (empty)
@@ -701,6 +703,160 @@ class TestMdHandler(unittest.TestCase):
         self.assertListEqual(new_nodes, expected)
     #endregion
     
+    #region text_to_textnodes
+    def test_starter(self):
+        """Basic test covering all Markdown elements at least once."""
+        text = "This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)"
+        new_nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("This is ", TextType.TEXT),
+            TextNode("text", TextType.BOLD),
+            TextNode(" with an ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" word and a ", TextType.TEXT),
+            TextNode("code block", TextType.CODE),
+            TextNode(" and an ", TextType.TEXT),
+            TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+            TextNode(" and a ", TextType.TEXT),
+            TextNode("link", TextType.LINK, "https://boot.dev"),
+        ]
+        self.assertListEqual(new_nodes, expected)
+
+    def test_only_text(self):
+        """Tests input with only plain text, no Markdown formatting."""
+        text = "Just a simple text string."
+        new_nodes = text_to_textnodes(text)
+        expected = [TextNode("Just a simple text string.", TextType.TEXT)]
+        self.assertListEqual(new_nodes, expected)
+
+    def test_only_images(self):
+        """Tests input containing only images."""
+        text = "![First](https://example.com/1.jpg) ![Second](https://example.com/2.jpg)"
+        new_nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("First", TextType.IMAGE, "https://example.com/1.jpg"),
+            TextNode(" ", TextType.TEXT),
+            TextNode("Second", TextType.IMAGE, "https://example.com/2.jpg"),
+        ]
+        self.assertListEqual(new_nodes, expected)
+
+    def test_only_links(self):
+        """Tests input containing only links."""
+        text = "[Link1](https://example.com) [Link2](https://example.com/2)"
+        new_nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("Link1", TextType.LINK, "https://example.com"),
+            TextNode(" ", TextType.TEXT),
+            TextNode("Link2", TextType.LINK, "https://example.com/2"),
+        ]
+        self.assertListEqual(new_nodes, expected)
+
+    def test_mixed_formatting_order(self):
+        """Tests varying order of different Markdown types."""
+        text = "_italic_ before **bold**, then a `code block`, and an ![image](https://img.com/img.jpg) and a [link](https://example.com)"
+        new_nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" before ", TextType.TEXT),
+            TextNode("bold", TextType.BOLD),
+            TextNode(", then a ", TextType.TEXT),
+            TextNode("code block", TextType.CODE),
+            TextNode(", and an ", TextType.TEXT),
+            TextNode("image", TextType.IMAGE, "https://img.com/img.jpg"),
+            TextNode(" and a ", TextType.TEXT),
+            TextNode("link", TextType.LINK, "https://example.com"),
+        ]
+        self.assertListEqual(new_nodes, expected)
+
+    def test_chained_bold(self):
+        """Tests multiple consecutive bold segments."""
+        text = "**Bold1** **Bold2**"
+        new_nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("Bold1", TextType.BOLD),
+            TextNode(" ", TextType.TEXT),
+            TextNode("Bold2", TextType.BOLD),
+        ]
+        self.assertListEqual(new_nodes, expected)
+
+    def test_chained_italics(self):
+        """Tests multiple consecutive italic segments."""
+        text = "_Italic1_ _Italic2_"
+        new_nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("Italic1", TextType.ITALIC),
+            TextNode(" ", TextType.TEXT),
+            TextNode("Italic2", TextType.ITALIC),
+        ]
+        self.assertListEqual(new_nodes, expected)
+
+    # We should support this but we don't
+    # def test_nested_formatting(self):
+    #     """Tests nested bold and italic formatting."""
+    #     text = "**This is _bold italic_ text**"
+    #     new_nodes = text_to_textnodes(text)
+    #     expected = [
+    #         TextNode("This is ", TextType.BOLD),
+    #         TextNode("bold italic", TextType.ITALIC),
+    #         TextNode(" text", TextType.BOLD),
+    #     ]
+    #     self.assertListEqual(new_nodes, expected)
+
+    def test_nested_links_and_bold(self):
+        """Tests bold text inside a link."""
+        text = "[**Bold Link**](https://example.com)"
+        new_nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("**Bold Link**", TextType.LINK, "https://example.com"),
+        ]
+        self.assertListEqual(new_nodes, expected)
+
+    def test_malformed_bold(self):
+        """Tests malformed bold text where only one asterisk is present."""
+        text = "This is **not bold"
+        with self.assertRaises(ValueError) as context:
+            text_to_textnodes(text)
+        self.assertEqual(str(context.exception), "Invalid Markdown: missing or unmatched delimiters")
+
+    def test_malformed_italics(self):
+        """Tests malformed italics where only one underscore is present."""
+        text = "This is _not italic"
+        with self.assertRaises(ValueError) as context:
+            text_to_textnodes(text)
+        self.assertEqual(str(context.exception), "Invalid Markdown: missing or unmatched delimiters")
+
+    def test_malformed_code_block(self):
+        """Tests malformed code block where only one backtick is present."""
+        text = "This is `not a valid code block"
+        with self.assertRaises(ValueError) as context:
+            text_to_textnodes(text)
+        self.assertEqual(str(context.exception), "Invalid Markdown: missing or unmatched delimiters")
+
+    def test_adjacent_markdown(self):
+        """Tests handling when two Markdown elements are directly adjacent."""
+        text = "**bold**_italic_`code`"
+        new_nodes = text_to_textnodes(text)
+        expected = [
+            TextNode("bold", TextType.BOLD),
+            TextNode("italic", TextType.ITALIC),
+            TextNode("code", TextType.CODE),
+        ]
+        self.assertListEqual(new_nodes, expected)
+
+    def test_edge_case_empty_string(self):
+        """Tests handling of an empty string."""
+        text = ""
+        new_nodes = text_to_textnodes(text)
+        expected = []
+        self.assertListEqual(new_nodes, expected)
+
+    def test_edge_case_whitespace(self):
+        """Tests handling of a string containing only whitespace."""
+        text = " "
+        new_nodes = text_to_textnodes(text)
+        expected = [TextNode(" ", TextType.TEXT)]
+        self.assertListEqual(new_nodes, expected)
+    #endregion
     
 if __name__ == "__main__":
     unittest.main()
