@@ -3,9 +3,7 @@ from textnode import TextNode, TextType
 from md_handler import split_nodes_delimiter, extract_markdown_images, extract_markdown_links
 
 class TestMdHandler(unittest.TestCase):
-    """
-    split_nodes_delimiter TESTS
-    """
+    #region split_nodes_delimiter
     def test_valid_split(self):
         """Tests splitting a valid Markdown-style text node."""
         nodes = [TextNode("This is **bold** text", TextType.TEXT)]
@@ -133,10 +131,10 @@ class TestMdHandler(unittest.TestCase):
         ]
 
         self.assertEqual(result, expected)
+        
+    #endregion
 
-    """
-    extract_markdown_images TESTS
-    """
+    #region extract_markdown_images
     def test_single_image(self):
         """Tests extracting a single markdown image."""
         text = "This is an image: ![Alt text](https://example.com/image.jpg)"
@@ -275,10 +273,10 @@ class TestMdHandler(unittest.TestCase):
         result = extract_markdown_images(text)
         expected = [("Alt", "https://example.com/img.jpg")]
         self.assertEqual(result, expected)
+    
+    #endregion
         
-    """
-    extract_markdown_links TEST
-    """
+    #region extract_markdown_links
     def test_single_link(self):
         """Tests extracting a single markdown link."""
         text = "This is a [link](https://example.com)."
@@ -403,6 +401,9 @@ class TestMdHandler(unittest.TestCase):
         result = extract_markdown_links(text)
         expected = [("![Image](https://example.com/image.jpg)", "https://example.com")]
         self.assertEqual(result, expected)
+        
+    #endregion
+    
 
 if __name__ == "__main__":
     unittest.main()
