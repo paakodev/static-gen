@@ -141,3 +141,10 @@ def text_to_textnodes(text: str) -> List[TextNode]:
     # Adjusted empty-node cleaner, leaves single spaces alone
     new_nodes = [node for node in new_nodes if not (node.text_type == TextType.TEXT and (node.text.strip() == "" and node.text != " "))]
     return new_nodes
+
+def markdown_to_blocks(markdown: str) -> List[str]:
+    blocks = markdown.split("\n\n")
+    blocks = [block.strip() for block in blocks]
+    blocks = [block for block in blocks if block]
+    return blocks
+

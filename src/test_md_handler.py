@@ -1,6 +1,6 @@
 import unittest
 from textnode import TextNode, TextType
-from md_handler import split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes
+from md_handler import split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks
 
 class TestMdHandler(unittest.TestCase):
     #region split_nodes_delimiter
@@ -858,5 +858,142 @@ class TestMdHandler(unittest.TestCase):
         self.assertListEqual(new_nodes, expected)
     #endregion
     
+    #region markdown_to_blocks
+    def test_markdown_to_blocks(self):
+        md = """
+This is **bolded** paragraph
+
+This is another paragraph with _italic_ text and `code` here
+This is the same paragraph on a new line
+
+- This is a list
+- with items
+        """ 
+        blocks = markdown_to_blocks(md)
+        self.assertEqual(
+            blocks,
+            [
+                "This is **bolded** paragraph",
+                "This is another paragraph with _italic_ text and `code` here\nThis is the same paragraph on a new line",
+                "- This is a list\n- with items",
+            ],
+        )
+    def test_single_paragraph(self):
+        """Tests a single paragraph as input."""
+        markdown = "This is a single paragraph."
+        result = markdown_to_blocks(markdown)
+        expected = ["This is a single paragraph."]
+        self.assertListEqual(result, expected)
+
+    def test_multiple_paragraphs(self):
+        """Tests multiple paragraphs separated by two newlines."""
+        markdown = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
+        result = markdown_to_blocks(markdown)
+        expected = [
+            "First paragraph.",
+            "Second paragraph.",
+            "Third paragraph.",
+        ]
+        self.assertListEqual(result, expected)
+
+    def test_leading_and_trailing_whitespace(self):
+        """Tests handling of leading and trailing whitespace in blocks."""
+        markdown = "   First paragraph.   \n\n   Second paragraph.   "
+        result = markdown_to_blocks(markdown)
+        expected = ["First paragraph.", "Second paragraph."]
+        self.assertListEqual(result, expected)
+
+    def test_extra_blank_lines(self):
+        """Tests handling of extra blank lines between blocks."""
+        markdown = "First paragraph.\n\n\n\nSecond paragraph."
+        result = markdown_to_blocks(markdown)
+        expected = ["First paragraph.", "Second paragraph."]
+        self.assertListEqual(result, expected)
+
+    def test_blocks_with_markdown_syntax(self):
+        """Tests handling of blocks that contain Markdown formatting."""
+        markdown = "# Header\n\n**Bold text**\n\n*Italic text*\n\n`Code block`"
+        result = markdown_to_blocks(markdown)
+        expected = [
+            "# Header",
+            "**Bold text**",
+            "*Italic text*",
+            "`Code block`",
+        ]
+        self.assertListEqual(result, expected)
+
+    def test_mixed_block_types(self):
+        """Tests handling of paragraphs, lists, and headers together."""
+        markdown = "# Header\n\nParagraph text.\n\n- List item 1\n- List item 2"
+        result = markdown_to_blocks(markdown)
+        expected = [
+            "# Header",
+            "Paragraph text.",
+            "- List item 1\n- List item 2",
+        ]
+        self.assertListEqual(result, expected)
+
+    def test_code_block(self):
+        """Tests that fenced code blocks are not split incorrectly."""
+        markdown = "```\nCode block\nwith multiple lines\n```\n\nNext paragraph."
+        result = markdown_to_blocks(markdown)
+        expected = [
+            "```\nCode block\nwith multiple lines\n```",
+            "Next paragraph.",
+        ]
+        self.assertListEqual(result, expected)
+
+    def test_blockquote(self):
+        """Tests handling of blockquotes as a separate block."""
+        markdown = "> This is a blockquote.\n\nThis is a paragraph."
+        result = markdown_to_blocks(markdown)
+        expected = [
+            "> This is a blockquote.",
+            "This is a paragraph.",
+        ]
+        self.assertListEqual(result, expected)
+
+    def test_list_handling(self):
+        """Tests that lists are kept together as a block."""
+        markdown = "- Item 1\n- Item 2\n\nAnother paragraph."
+        result = markdown_to_blocks(markdown)
+        expected = [
+            "- Item 1\n- Item 2",
+            "Another paragraph.",
+        ]
+        self.assertListEqual(result, expected)
+
+    def test_empty_input(self):
+        """Tests handling of an empty string."""
+        markdown = ""
+        result = markdown_to_blocks(markdown)
+        expected = []
+        self.assertListEqual(result, expected)
+
+    def test_only_whitespace(self):
+        """Tests handling of a string with only whitespace."""
+        markdown = "   \n   "
+        result = markdown_to_blocks(markdown)
+        expected = []
+        self.assertListEqual(result, expected)
+
+    def test_multiple_newlines_at_end(self):
+        """Tests handling of extra newlines at the end of the document."""
+        markdown = "First block.\n\nSecond block.\n\n"
+        result = markdown_to_blocks(markdown)
+        expected = ["First block.", "Second block."]
+        self.assertListEqual(result, expected)
+        
+    def test_odd_number_of_consecutive_newlines(self):
+        """Tests that an odd number of consecutive newlines is treated the same as an even number."""
+        markdown = "First block.\n\n\nSecond block.\n\n\n\n\nThird block."
+        result = markdown_to_blocks(markdown)
+        expected = [
+            "First block.",
+            "Second block.",
+            "Third block.",
+        ]
+        self.assertListEqual(result, expected)
+    #endregion
 if __name__ == "__main__":
     unittest.main()
