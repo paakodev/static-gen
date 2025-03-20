@@ -1,6 +1,15 @@
+from enum import Enum
 from typing import List
 from textnode import TextNode, TextType
 import re
+
+class BlockType(Enum):
+    PARAGRAPH = "paragraph"
+    HEADING = "heading"
+    CODE = "code"
+    QUOTE = "quote"
+    UNORDERED_LIST = "unordered_list"
+    ORDERED_LIST = "ordered_list"
 
 def split_nodes_delimiter(old_nodes: List[TextNode], delimiter: str, text_type: TextType) -> List[TextNode]:
     new_nodes = []
@@ -147,4 +156,45 @@ def markdown_to_blocks(markdown: str) -> List[str]:
     blocks = [block.strip() for block in blocks]
     blocks = [block for block in blocks if block]
     return blocks
+
+def block_to_block_type(block: str) -> BlockType:
+    match block[0]:
+        # Header, 1-6 # + plus space
+        # We can skip counting, but it should have the space in position 1 to 6
+        case "#":
+            for i in range(1, 7):
+                if block[i] == "#":
+                    continue
+                if block[i] == " ":
+                    return BlockType.HEADING
+            return BlockType.PARAGRAPH
+        # Code, ``` + text + ```
+        # Needs correct amounts of both sets
+        case "`":
+            if block[0:3] == "```" and block[-3:] == "```":
+                return BlockType.CODE
+            return BlockType.PARAGRAPH
+        # Quote, all lines need this
+        case ">":
+            for line in block.split("\n"):
+                if line[0] != ">":
+                    return BlockType.PARAGRAPH
+            return BlockType.QUOTE
+        # Unordered list, all lines need this + space
+        case "-":
+            for line in block.split("\n"):
+                if line[0:2] != "- ":
+                    return BlockType.PARAGRAPH
+            return BlockType.UNORDERED_LIST
+        # Ordered list, has to start at 1, increase for following lines
+        # Also requires '. ' after each number
+        case "1":
+            lines = block.split("\n")
+            for i in range(0, len(lines)):
+                if lines[i][:3] != f"{i+1}. ":
+                    return BlockType.PARAGRAPH
+            return BlockType.ORDERED_LIST
+        # Normal paragraph
+        case _:
+            return BlockType.PARAGRAPH
 

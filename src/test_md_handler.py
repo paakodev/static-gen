@@ -1,6 +1,6 @@
 import unittest
 from textnode import TextNode, TextType
-from md_handler import split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks
+from md_handler import BlockType, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type
 
 class TestMdHandler(unittest.TestCase):
     #region split_nodes_delimiter
@@ -995,5 +995,84 @@ This is the same paragraph on a new line
         ]
         self.assertListEqual(result, expected)
     #endregion
+
+    #region block_to_block_type
+    def test_paragraph(self):
+        """Tests that a normal block of text is recognized as a paragraph."""
+        block = "This is a regular paragraph with no special formatting."
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.PARAGRAPH)
+
+    def test_heading_level_1(self):
+        """Tests that a level 1 heading (#) is recognized."""
+        block = "# Heading 1"
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.HEADING)
+
+    def test_heading_level_3(self):
+        """Tests that a level 3 heading (###) is recognized."""
+        block = "### Heading 3"
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.HEADING)
+
+    def test_code_block(self):
+        """Tests that a triple backtick block is recognized as code."""
+        block = "```\nSome code here\n```"
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.CODE)
+
+    def test_quote(self):
+        """Tests that a block starting with > is recognized as a quote."""
+        block = "> This is a blockquote."
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.QUOTE)
+
+    def test_unordered_list_dash(self):
+        """Tests that a block starting with - is recognized as an unordered list."""
+        block = "- Item 1\n- Item 2\n- Item 3"
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.UNORDERED_LIST)
+
+    # We don't support this syntax, but maybe we should?
+    # def test_unordered_list_asterisk(self):
+    #     """Tests that a block starting with * is recognized as an unordered list."""
+    #     block = "* Item A\n* Item B\n* Item C"
+    #     result = block_to_block_type(block)
+    #     self.assertEqual(result, BlockType.UNORDERED_LIST)
+
+    def test_ordered_list(self):
+        """Tests that a block starting with a number and a dot is recognized as an ordered list."""
+        block = "1. First item\n2. Second item\n3. Third item"
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.ORDERED_LIST)
+
+    def test_invalid_ordered_list(self):
+        """Tests that a malformed ordered list is not misclassified."""
+        block = "1 First item\n2 Second item\n3 Third item"
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.PARAGRAPH)
+
+    def test_malformed_unordered_list(self):
+        """Tests that a malformed unordered list is not misclassified."""
+        block = "*Item 1\n-Item 2\n*Item 3"
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.PARAGRAPH)
+    
+    def test_all_heading_levels(self):
+        """Tests that all heading levels (# to ######) are recognized correctly."""
+        for level in range(1, 7):
+            with self.subTest(level=level):
+                block = f"{'#' * level} Heading {level}"
+                result = block_to_block_type(block)
+                self.assertEqual(result, BlockType.HEADING)
+
+    def test_multiline_quote(self):
+        """Tests that a multiline blockquote is correctly recognized as a quote."""
+        block = "> This is a blockquote.\n> It has multiple lines.\n> And keeps going."
+        result = block_to_block_type(block)
+        self.assertEqual(result, BlockType.QUOTE)
+        
+    #endregion
+
 if __name__ == "__main__":
     unittest.main()
