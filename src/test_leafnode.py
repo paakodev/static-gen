@@ -24,16 +24,16 @@ class TestTextNode(unittest.TestCase):
         self.assertIn(html_output, [expected1, expected2])  # Account for unordered dict
 
     def test_leaf_to_html_empty_value_raises_error(self):
-        node = LeafNode("p", "")
         with self.assertRaises(ValueError) as context:
+            node = LeafNode("p", "")
             node.to_html()
-        self.assertEqual(str(context.exception), "LeafNode cannot have empty value.")
+        self.assertEqual(str(context.exception), "'p' cannot have an empty value.")
 
     def test_leaf_to_html_none_value_raises_error(self):
-        node = LeafNode("p", None)
         with self.assertRaises(ValueError) as context:
+            node = LeafNode("p", None)
             node.to_html()
-        self.assertEqual(str(context.exception), "LeafNode cannot have empty value.")
+        self.assertEqual(str(context.exception), "'p' cannot have an empty value.")
 
     def test_leaf_to_html_empty_tag(self):
         node = LeafNode("", "Text")

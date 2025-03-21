@@ -7,7 +7,7 @@ class HTMLNode:
         self.tag = tag
         self.value = value
         self.children = children
-        self.props = props
+        self.props = props or {}
     
     def to_html(self):
         raise NotImplementedError
@@ -15,7 +15,8 @@ class HTMLNode:
     def props_to_html(self) -> str:
         if not self.props:
             return ""
-        return " ".join(list(map(lambda x: f"{x}:\"{self.props[x]}\"", self.props)))
+        # Serialize props into key="value" format
+        return " " + " ".join(f'{key}="{value}"' for key, value in self.props.items())
     
     def __repr__(self) -> str:
         return f"HTMLNode({self.tag}, {self.value}, {self.children}, {self.props})"
