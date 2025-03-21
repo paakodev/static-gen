@@ -1,6 +1,6 @@
 import unittest
 from textnode import TextNode, TextType
-from md_handler import BlockType, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type
+from md_handler import BlockType, markdown_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type
 
 class TestMdHandler(unittest.TestCase):
     #region split_nodes_delimiter
@@ -1072,6 +1072,140 @@ This is the same paragraph on a new line
         result = block_to_block_type(block)
         self.assertEqual(result, BlockType.QUOTE)
         
+    #endregion
+
+    #region markdown_to_html_node
+    def test_paragraphs(self):
+        """Tests multiple paragraphs with inline formatting."""
+        md = """
+This is **bolded** paragraph
+text in a p
+tag here
+
+This is another paragraph with _italic_ text and `code` here
+    """
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        expected = (
+            "<div><p>This is <b>bolded</b> paragraph text in a p tag here</p>"
+            "<p>This is another paragraph with <i>italic</i> text and <code>code</code> here</p></div>"
+        )
+        self.assertEqual(html, expected)
+
+    def test_codeblock(self):
+        """Tests preservation of formatting inside a fenced code block."""
+        md = """
+```
+This is text that _should_ remain
+the **same** even with inline stuff
+```
+        """
+        node = markdown_to_html_node(md)
+        html = node.to_html()
+        expected = (
+            "<div><pre><code>This is text that _should_ remain\n"
+            "the **same** even with inline stuff\n</code></pre></div>"
+        )
+        self.assertEqual(html, expected)
+
+    def test_minimal_paragraph(self):
+        """Tests a single short paragraph."""
+        md = "Just one line."
+        html = markdown_to_html_node(md).to_html()
+        expected = "<div><p>Just one line.</p></div>"
+        self.assertEqual(html, expected)
+
+    def test_minimal_heading(self):
+        """Tests a heading with a single character of content."""
+        md = "# H"
+        html = markdown_to_html_node(md).to_html()
+        expected = "<div><h1>H</h1></div>"
+        self.assertEqual(html, expected)
+
+    def test_multiline_quote(self):
+        """Tests blockquotes that span multiple lines."""
+        md = "> line one\n> line two\n> line three"
+        html = markdown_to_html_node(md).to_html()
+        expected = "<div><blockquote>line one\nline two\nline three</blockquote></div>"
+        self.assertEqual(html, expected)
+
+    # We don't support nesting, though we probably should...
+    # def test_nested_inline_formatting(self):
+    #     """Tests bold containing italic inside a paragraph."""
+    #     md = "This is **bold and _italic_** text"
+    #     html = markdown_to_html_node(md).to_html()
+    #     expected = "<div><p>This is <b>bold and <i>italic</i></b> text</p></div>"
+    #     self.assertEqual(html, expected)
+
+    def test_codeblock_preserves_all_content(self):
+        """Tests that code blocks preserve content exactly."""
+        md = "```\ndef func():\n    return '**bold** _italic_'\n```"
+        html = markdown_to_html_node(md).to_html()
+        expected = (
+            "<div><pre><code>def func():\n    return '**bold** _italic_'\n</code></pre></div>"
+        )
+        self.assertEqual(html, expected)
+
+    def test_ordered_list(self):
+        """Tests parsing of a basic ordered list."""
+        md = "1. One\n2. Two\n3. Three"
+        html = markdown_to_html_node(md).to_html()
+        expected = "<div><ol><li>One</li><li>Two</li><li>Three</li></ol></div>"
+        self.assertEqual(html, expected)
+
+    def test_unordered_list(self):
+        """Tests parsing of a basic unordered list."""
+        md = "- Apple\n- Banana\n- Cherry"
+        html = markdown_to_html_node(md).to_html()
+        expected = "<div><ul><li>Apple</li><li>Banana</li><li>Cherry</li></ul></div>"
+        self.assertEqual(html, expected)
+
+    def test_empty_string(self):
+        """Tests that an empty markdown string raises a ValueError."""
+        md = ""
+        with self.assertRaises(ValueError) as context:
+            markdown_to_html_node(md)
+        self.assertEqual(str(context.exception), "ParentNode must have child nodes")
+
+
+    def test_all_heading_levels(self):
+        """Tests all heading levels from 1 to 6."""
+        for i in range(1, 7):
+            with self.subTest(level=i):
+                md = f"{'#' * i} Heading {i}"
+                html = markdown_to_html_node(md).to_html()
+                expected = f"<div><h{i}>Heading {i}</h{i}></div>"
+                self.assertEqual(html, expected)
+
+    def test_unclosed_codeblock(self):
+        """Tests that an unclosed code block raises a ValueError."""
+        md = "```\nunclosed code block"
+        with self.assertRaises(ValueError):
+            markdown_to_html_node(md)
+
+    def test_unclosed_bold(self):
+        """Tests that unmatched bold delimiters raise a ValueError."""
+        md = "This is **not closed"
+        with self.assertRaises(ValueError):
+            markdown_to_html_node(md)
+
+    def test_paragraph_with_link_and_image(self):
+        """Tests paragraphs that contain both a link and an image."""
+        md = "A [link](https://example.com) and ![img](https://example.com/img.jpg) in text"
+        html = markdown_to_html_node(md).to_html()
+        expected = (
+            "<div><p>A <a href=\"https://example.com\">link</a> and "
+            "<img src=\"https://example.com/img.jpg\" alt=\"img\" /> in text</p></div>"
+        )
+        self.assertEqual(html, expected)
+
+    def test_adjacent_blocks(self):
+        """Tests several distinct block types used together."""
+        md = "# Title\n\nSome text.\n\n- Item"
+        html = markdown_to_html_node(md).to_html()
+        expected = "<div><h1>Title</h1><p>Some text.</p><ul><li>Item</li></ul></div>"
+        self.assertEqual(html, expected)
+    
     #endregion
 
 if __name__ == "__main__":

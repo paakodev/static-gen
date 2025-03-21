@@ -1,6 +1,9 @@
 from enum import Enum
 from typing import List
-from textnode import TextNode, TextType
+from leafnode import LeafNode
+from parentnode import ParentNode
+from textnode import TextNode, TextType, text_node_to_html_node
+from htmlnode import HTMLNode
 import re
 
 class BlockType(Enum):
@@ -198,3 +201,86 @@ def block_to_block_type(block: str) -> BlockType:
         case _:
             return BlockType.PARAGRAPH
 
+def markdown_to_html_node(markdown: str) -> HTMLNode:
+    new_children = []
+    blocks = markdown_to_blocks(markdown)
+    for block in blocks:
+        md_type = block_to_block_type(block)
+        match (md_type):
+            case BlockType.HEADING:
+                new_children.append(create_header_node(block))
+            case BlockType.CODE:
+                new_children.append(create_code_node(block))
+            case BlockType.QUOTE:
+                new_children.append(create_quote_node(block))
+            case BlockType.UNORDERED_LIST:
+                new_children.append(create_unordered_list(block))
+            case BlockType.ORDERED_LIST:
+                new_children.append(create_ordered_list(block))
+            case BlockType.PARAGRAPH:
+                new_children.append(create_paragraph(block))
+            # This *really* *should* *not* happen. block_to_block_types will return PARAGRAPH
+            # for unknown blocks, but leaving in a guard isn't a bad thing.
+            case _:
+                raise ValueError("unknown block type! help!")
+    
+    return ParentNode("div", new_children)
+
+def create_header_node(block: str) -> HTMLNode:
+    i = 0
+    while i < len(block) and block[i] == "#":
+        i += 1
+    
+    text = block[i:].strip()
+    node = LeafNode(f"h{i}", text)
+    return node
+
+def create_code_node(block: str) -> HTMLNode:
+    block = block[3:-3] # Only strip leading/trailing backticks
+    if block.startswith("\n"):
+        block = block[1:] # But also remove opening newlines, if present
+        
+    node = LeafNode("code", block)
+    parent = ParentNode("pre", [node])
+    
+    return parent
+
+
+def create_quote_node(block: str) -> HTMLNode:
+    block = "\n".join([line.lstrip(">").strip() for line in block.split("\n")])
+    node = LeafNode("blockquote", block)
+    
+    return node
+
+def create_unordered_list(block: str) -> HTMLNode:
+    pattern = re.compile(r"^-")
+    list_items = []
+    lines = block.split("\n")
+    for line in lines:
+        line = re.sub(pattern, "", line)
+        leaf = LeafNode("li", line.strip())
+        list_items.append(leaf)
+    parent = ParentNode("ul", list_items)
+    
+    return parent
+
+def create_ordered_list(block: str) -> HTMLNode:
+    pattern = re.compile(r"^\d+?\.")
+    list_items = []
+    lines = block.split("\n")
+    for line in lines:
+        line = re.sub(pattern, "", line)
+        leaf = LeafNode("li", line.strip())
+        list_items.append(leaf)
+    parent = ParentNode("ol", list_items)
+    
+    return parent
+
+def create_paragraph(block: str) -> List[HTMLNode]:
+    #  Normalize: Collapse single newlines into spaces
+    block = block.replace("\n", " ")  # Only applies to paragraph blocks
+    text_nodes = text_to_textnodes(block)
+    children = [text_node_to_html_node(node) for node in text_nodes]
+    node = ParentNode("p", children)
+    
+    return node
