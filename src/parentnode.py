@@ -1,7 +1,8 @@
+from typing import List
 from htmlnode import HTMLNode
 
 class ParentNode(HTMLNode):
-    def __init__(self, tag, children, props=None):
+    def __init__(self, tag: str, children: List[HTMLNode], props: dict = None):
         super().__init__(tag, None, children, props)
     
     def to_html(self) -> str:
