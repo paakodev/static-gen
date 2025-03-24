@@ -232,7 +232,9 @@ def create_header_node(block: str) -> HTMLNode:
         i += 1
     
     text = block[i:].strip()
-    node = LeafNode(f"h{i}", text)
+    text_nodes = text_to_textnodes(text)
+    html_nodes = [text_node_to_html_node(text_node) for text_node in text_nodes]
+    node = ParentNode(f"h{i}", html_nodes)
     return node
 
 def create_code_node(block: str) -> HTMLNode:
@@ -248,7 +250,9 @@ def create_code_node(block: str) -> HTMLNode:
 
 def create_quote_node(block: str) -> HTMLNode:
     block = "\n".join([line.lstrip(">").strip() for line in block.split("\n")])
-    node = LeafNode("blockquote", block)
+    text_nodes = text_to_textnodes(block)
+    html_nodes = [text_node_to_html_node(text_node) for text_node in text_nodes]
+    node = ParentNode("blockquote", html_nodes)
     
     return node
 
