@@ -1,6 +1,6 @@
 import unittest
 from textnode import TextNode, TextType
-from md_handler import BlockType, markdown_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type
+from md_handler import BlockType, extract_title, markdown_to_html_node, split_nodes_delimiter, extract_markdown_images, extract_markdown_links, split_nodes_image, split_nodes_link, text_to_textnodes, markdown_to_blocks, block_to_block_type
 
 class TestMdHandler(unittest.TestCase):
     #region split_nodes_delimiter
@@ -1206,6 +1206,52 @@ the **same** even with inline stuff
         expected = "<div><h1>Title</h1><p>Some text.</p><ul><li>Item</li></ul></div>"
         self.assertEqual(html, expected)
     
+    #endregion
+
+    #region extract_title
+    def test_basic_title(self):
+        """Tests extracting a basic title from the first line."""
+        markdown = "# My Title\n\nSome content here."
+        self.assertEqual(extract_title(markdown), "My Title")
+
+    def test_empty_input_raises(self):
+        """Tests that empty markdown input raises a ValueError."""
+        with self.assertRaises(ValueError) as context:
+            extract_title("")
+        self.assertEqual(str(context.exception), "Markdown document cannot be empty")
+
+    def test_missing_title_line_raises(self):
+        """Tests that missing title line raises a ValueError."""
+        markdown = "## Subtitle\nSome content"
+        with self.assertRaises(ValueError) as context:
+            extract_title(markdown)
+        self.assertEqual(str(context.exception), "No title in markdown document")
+
+    def test_multiple_title_lines_uses_first(self):
+        """Tests that the first # title line is used."""
+        markdown = "# First Title\n\n# Second Title\n\nSome text"
+        self.assertEqual(extract_title(markdown), "First Title")
+
+    def test_title_with_whitespace(self):
+        """Tests that leading/trailing whitespace is stripped from the title."""
+        markdown = "#    My Title With Spaces    \n\nContent"
+        self.assertEqual(extract_title(markdown), "My Title With Spaces")
+
+    def test_title_with_special_characters(self):
+        """Tests that special characters in the title are preserved."""
+        markdown = "# Hello @#$%^&*() World!"
+        self.assertEqual(extract_title(markdown), "Hello @#$%^&*() World!")
+
+    def test_title_not_on_first_line(self):
+        """Tests that the function finds a title even if not on line 1."""
+        markdown = "\n\n\n# Delayed Title\nContent"
+        self.assertEqual(extract_title(markdown), "Delayed Title")
+
+    def test_title_with_inline_formatting(self):
+        """Tests that inline markdown formatting is preserved (not stripped)."""
+        markdown = "# Welcome to **My Site**"
+        self.assertEqual(extract_title(markdown), "Welcome to **My Site**")
+
     #endregion
 
 if __name__ == "__main__":

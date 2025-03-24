@@ -284,3 +284,12 @@ def create_paragraph(block: str) -> List[HTMLNode]:
     node = ParentNode("p", children)
     
     return node
+
+def extract_title(markdown: str) -> str:
+    if not markdown:
+        raise ValueError("Markdown document cannot be empty")
+    for line in markdown.split("\n"):
+        if line.startswith("# "):
+            return line[2:].strip()
+    
+    raise ValueError("No title in markdown document")
