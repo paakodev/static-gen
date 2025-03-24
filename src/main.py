@@ -1,8 +1,10 @@
+import re
 import shutil
 import traceback
 from textnode import *
 import argparse
 import os
+from md_handler import extract_title, markdown_to_html_node
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
@@ -14,6 +16,14 @@ CONTENT_DIR = os.path.join(PROJECT_ROOT, "content")
 def publish(content_dir: str, static_dir: str, output_dir: str, debug: bool = False) -> None:
     clean_dir(output_dir, debug)
     copy_files(static_dir, output_dir, debug)
+    
+    # Manually generate one sample page for now
+    input_file = os.path.join(content_dir, "index.md")
+    template_file = os.path.join(PROJECT_ROOT, "template.html")
+    output_file = os.path.join(output_dir, "index.html")
+    
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    generate_page(input_file, template_file, output_file, debug)
 
 def clean_dir(dir_to_clean: str, debug: bool = False) -> None:
     if not dir_to_clean.startswith(PROJECT_ROOT):
@@ -43,6 +53,24 @@ def copy_files(input_dir: str, output_dir: str, debug: bool = False) -> None:
                 new_output = os.path.join(output_dir, entry.name)
                 if debug: print(f"Entering {new_input}...")
                 copy_files(new_input, new_output, debug)
+                
+def generate_page(input_file: str, template_file: str, output_file: str, debug: bool = False) -> None:
+    print(f"Generating page from {input_file} to {output_file} using {template_file}")
+    markdown = None
+    template = None
+    with open(input_file, "r", encoding="utf8") as file1:
+        markdown = file1.read()
+    
+    with open(template_file, "r", encoding="utf8") as file2:
+        template = file2.read()
+        
+    title = extract_title(markdown)
+    html_content = markdown_to_html_node(markdown).to_html()
+    output = template.replace(r"{{ Title }}", title)
+    output = output.replace(r"{{ Content }}", html_content)
+    
+    with open(output_file, "w+", encoding="utf8") as out:
+        out.write(output)
 
 def main():
     parser = argparse.ArgumentParser(description='Generate static site from MarkDown')  
