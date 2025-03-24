@@ -55,7 +55,7 @@ def copy_files(input_dir: str, output_dir: str, debug: bool = False) -> None:
                 copy_files(new_input, new_output, debug)
                 
 def generate_page(input_file: str, template_file: str, output_file: str, debug: bool = False) -> None:
-    print(f"Generating page from {input_file} to {output_file} using {template_file}")
+    if debug: print(f"Generating page from {input_file} to {output_file} using {template_file}")
     markdown = None
     template = None
     with open(input_file, "r", encoding="utf8") as file1:
