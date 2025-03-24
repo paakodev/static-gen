@@ -16,27 +16,7 @@ CONTENT_DIR = os.path.join(PROJECT_ROOT, "content")
 def publish(content_dir: str, static_dir: str, output_dir: str, debug: bool = False) -> None:
     clean_dir(output_dir, debug)
     copy_files(static_dir, output_dir, debug)
-    
-    # Manually generate one sample page for now
-    input_file = os.path.join(content_dir, "index.md")
-    template_file = os.path.join(PROJECT_ROOT, "template.html")
-    output_file = os.path.join(output_dir, "index.html")
-    
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    generate_page(input_file, template_file, output_file, debug)
-    
-    # Or slightly more...
-    inputs = [
-        'blog/glorfindel/index.md',
-        'blog/tom/index.md',
-        'blog/majesty/index.md',
-        'contact/index.md'
-    ]
-    for input in inputs:
-        in_file = os.path.join(content_dir, input)
-        out_file = os.path.join(output_dir, input.replace(r'.md', r'.html'))
-        os.makedirs(os.path.dirname(out_file), exist_ok=True)
-        generate_page(in_file, template_file, out_file, debug)
+    generate_pages_recursive(content_dir, PROJECT_ROOT, output_dir, debug)
 
 def clean_dir(dir_to_clean: str, debug: bool = False) -> None:
     if not dir_to_clean.startswith(PROJECT_ROOT):
@@ -66,6 +46,23 @@ def copy_files(input_dir: str, output_dir: str, debug: bool = False) -> None:
                 new_output = os.path.join(output_dir, entry.name)
                 if debug: print(f"Entering {new_input}...")
                 copy_files(new_input, new_output, debug)
+
+def generate_pages_recursive(input_dir: str, template_path: str, output_dir: str, debug: bool = False) -> None:
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        if debug: print(f"Created output directory: {output_dir}")
+
+    template_file = os.path.join(template_path, "template.html")
+    with os.scandir(input_dir) as entries:
+        for entry in entries:
+            if entry.is_file():
+                output_file = os.path.join(output_dir, entry.name.replace(r'.md', r'.html'))
+                generate_page(entry.path, template_file, output_file, debug)
+            elif entry.is_dir():
+                new_input = os.path.join(input_dir, entry.name)
+                new_output = os.path.join(output_dir, entry.name)
+                if debug: print(f"Entering {new_input}...")
+                generate_pages_recursive(new_input, template_path, new_output, debug)
                 
 def generate_page(input_file: str, template_file: str, output_file: str, debug: bool = False) -> None:
     if debug: print(f"Generating page from {input_file} to {output_file} using {template_file}")
