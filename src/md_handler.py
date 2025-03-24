@@ -258,8 +258,10 @@ def create_unordered_list(block: str) -> HTMLNode:
     lines = block.split("\n")
     for line in lines:
         line = re.sub(pattern, "", line)
-        leaf = LeafNode("li", line.strip())
-        list_items.append(leaf)
+        text_nodes = text_to_textnodes(line.strip())
+        html_nodes = [text_node_to_html_node(text_node) for text_node in text_nodes]
+        ul_node = ParentNode("li", html_nodes)
+        list_items.append(ul_node)
     parent = ParentNode("ul", list_items)
     
     return parent
@@ -270,8 +272,10 @@ def create_ordered_list(block: str) -> HTMLNode:
     lines = block.split("\n")
     for line in lines:
         line = re.sub(pattern, "", line)
-        leaf = LeafNode("li", line.strip())
-        list_items.append(leaf)
+        text_nodes = text_to_textnodes(line.strip())
+        html_nodes = [text_node_to_html_node(text_node) for text_node in text_nodes]
+        ol_node = ParentNode("li", html_nodes)
+        list_items.append(ol_node)
     parent = ParentNode("ol", list_items)
     
     return parent
