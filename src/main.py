@@ -24,6 +24,19 @@ def publish(content_dir: str, static_dir: str, output_dir: str, debug: bool = Fa
     
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     generate_page(input_file, template_file, output_file, debug)
+    
+    # Or slightly more...
+    inputs = [
+        'blog/glorfindel/index.md',
+        'blog/tom/index.md',
+        'blog/majesty/index.md',
+        'contact/index.md'
+    ]
+    for input in inputs:
+        in_file = os.path.join(content_dir, input)
+        out_file = os.path.join(output_dir, input.replace(r'.md', r'.html'))
+        os.makedirs(os.path.dirname(out_file), exist_ok=True)
+        generate_page(in_file, template_file, out_file, debug)
 
 def clean_dir(dir_to_clean: str, debug: bool = False) -> None:
     if not dir_to_clean.startswith(PROJECT_ROOT):
